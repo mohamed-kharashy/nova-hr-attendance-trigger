@@ -1,13 +1,20 @@
 name: Start attendance punch
 
-# This repo is public so GitHub's scheduler actually runs.
-# It holds no passwords. It only asks the private attendance repo to punch.
+# Public repo: GitHub runs scheduled workflows here.
+# No passwords. This only starts the private attendance repo.
 on:
   schedule:
-    - cron: "25 9 * * 0-4"
+    # Several minutes, so one dropped slot still punches. Sunday-Thursday.
+    - cron: "15,25,35,45 9 * * 0-4"
       timezone: "Africa/Cairo"
-    - cron: "25 17 * * 0-4"
+    - cron: "15,25,35,45 17 * * 0-4"
       timezone: "Africa/Cairo"
+    # UTC backups if a timezone schedule is ignored.
+    # The private repo waits until 10:00 or 18:00 and punches only once.
+    - cron: "15,25,35,45 6 * * 0-4"
+    - cron: "15,25,35,45 7 * * 0-4"
+    - cron: "15,25,35,45 14 * * 0-4"
+    - cron: "15,25,35,45 15 * * 0-4"
   workflow_dispatch:
     inputs:
       mode:
@@ -34,12 +41,14 @@ jobs:
           fi
           if [ "$EVENT" = "workflow_dispatch" ]; then
             MODE="$INPUT_MODE"
-          elif [ "$SCHEDULE" = "25 17 * * 0-4" ]; then
-            MODE=out
           else
-            MODE=in
+            HOUR=$(printf '%s' "$SCHEDULE" | awk '{print $2}')
+            case "$HOUR" in
+              17|14|15) MODE=out ;;
+              *) MODE=in ;;
+            esac
           fi
-          echo "Dispatching check-$MODE"
+          echo "Dispatching check-$MODE (schedule: ${SCHEDULE:-manual})"
           curl -fsS -X POST \
             -H "Authorization: Bearer $TOKEN" \
             -H "Accept: application/vnd.github+json" \
