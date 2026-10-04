@@ -1,0 +1,48 @@
+name: Start attendance punch
+
+# This repo is public so GitHub's scheduler actually runs.
+# It holds no passwords. It only asks the private attendance repo to punch.
+on:
+  schedule:
+    - cron: "25 9 * * 0-4"
+      timezone: "Africa/Cairo"
+    - cron: "25 17 * * 0-4"
+      timezone: "Africa/Cairo"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Punch type"
+        type: choice
+        options: [in, out]
+        default: out
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Start the private attendance workflow
+        env:
+          TOKEN: ${{ secrets.DISPATCH_TOKEN }}
+          EVENT: ${{ github.event_name }}
+          SCHEDULE: ${{ github.event.schedule }}
+          INPUT_MODE: ${{ inputs.mode }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "!! DISPATCH_TOKEN secret is missing"
+            exit 1
+          fi
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            MODE="$INPUT_MODE"
+          elif [ "$SCHEDULE" = "25 17 * * 0-4" ]; then
+            MODE=out
+          else
+            MODE=in
+          fi
+          echo "Dispatching check-$MODE"
+          curl -fsS -X POST \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/mohamed-kharashy/nova-hr-attendance-cron/actions/workflows/attendance.yml/dispatches \
+            -d "{\"ref\":\"main\",\"inputs\":{\"mode\":\"$MODE\",\"dry_run\":\"false\",\"wait\":\"true\"}}"
+          echo "Dispatch accepted"
