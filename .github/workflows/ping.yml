@@ -1,12 +1,12 @@
 name: Start attendance punch
 
 # Public repo: this is the only clock. No passwords.
-# One run per punch, Sunday-Thursday, 35 minutes before 10:00 and 18:00 Cairo.
+# One run per punch, Sunday-Thursday, at 10:00 and 18:00 Cairo.
 on:
   schedule:
-    - cron: "25 9 * * 0-4"
+    - cron: "0 10 * * 0-4"
       timezone: "Africa/Cairo"
-    - cron: "25 17 * * 0-4"
+    - cron: "0 18 * * 0-4"
       timezone: "Africa/Cairo"
   workflow_dispatch:
     inputs:
@@ -37,7 +37,7 @@ jobs:
           else
             HOUR=$(printf '%s' "$SCHEDULE" | awk '{print $2}')
             case "$HOUR" in
-              17) MODE=out ;;
+              18) MODE=out ;;
               *) MODE=in ;;
             esac
           fi
